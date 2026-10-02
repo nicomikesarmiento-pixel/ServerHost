@@ -2,7 +2,6 @@ const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// CORS setup para payagan ang Sketchware app na kumonekta
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -10,7 +9,6 @@ app.use((req, res, next) => {
     next();
 });
 
-// Proxy and Stream Endpoint
 app.get('/proxy', async (req, res) => {
     const targetUrl = req.query.url;
     if (!targetUrl) {
@@ -18,20 +16,21 @@ app.get('/proxy', async (req, res) => {
     }
 
     try {
-        console.log(`[CLOUD SERVER] Kumukuha ng data para sa: ${targetUrl}`);
+        console.log(`[PROXY] Sinusubukang kunin ang: ${targetUrl}`);
         
         const response = await fetch(targetUrl, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5'
             },
             redirect: 'follow'
         });
 
         if (!response.ok) {
-            return res.status(response.status).send(`Nabigong kunin ang URL: ${response.statusText}`);
+            return res.status(response.status).send(`Server Error: Target responded with status ${response.status} ${response.statusText}`);
         }
 
-        // Kopyahin ang tamang content headers
         const contentType = response.headers.get('content-type') || 'application/octet-stream';
         res.setHeader('Content-Type', contentType);
         
@@ -40,7 +39,6 @@ app.get('/proxy', async (req, res) => {
             res.setHeader('Content-Length', contentLength);
         }
 
-        // I-stream ang data mula sa cloud server patungo sa Sketchware app nang tuloy-tuloy
         const reader = response.body.getReader();
         while (true) {
             const { done, value } = await reader.read();
@@ -50,17 +48,16 @@ app.get('/proxy', async (req, res) => {
         res.end();
 
     } catch (err) {
-        console.error('Proxy Error:', err);
-        res.status(500).send('Server Error: ' + err.message);
+        console.error('Fetch Failed Error:', err.message);
+        res.status(500).send('Server Error: fetch failed - ' + err.message);
     }
 });
 
-// Root status check
 app.get('/', (req, res) => {
-    res.send('🚀 Ultra Booster Remote Cloud Server ay Aktibo at Handang Bumayo!');
+    res.send('🚀 Ultra Booster Proxy Server ay Online!');
 });
 
 app.listen(PORT, () => {
-    console.log(`Server ay tumatakbo at nakikinig sa port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
-  
+                
